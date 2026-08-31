@@ -1,0 +1,21 @@
+# Artefactos de compilación del módulo
+*.o
+*.ko
+*.ko.*
+
+*.mod
+*.mod.c
+*.mod.o
+*.symvers
+*.order
+Module.symvers
+modules.order
+.*.cmd
+.tmp_versions/
+
+# VM de pruebas (QEMU): versionar solo el orquestador reproducible
+vm/*
+!vm/vm.sh
+
+# Estado local de herramientas de desarrollo
+.pi-subagents/

@@ -1,0 +1,24 @@
+# Artefactos de compilación del módulo de kernel
+*.o
+*.ko
+*.ko.*
+*.mod
+*.mod.c
+*.mod.o
+*.symvers
+*.order
+Module.symvers
+modules.order
+.*.cmd
+.tmp_versions/
+
+# Imágenes y estado de la VM (solo se versiona vm/vm.sh)
+*.qcow2
+*.img
+seed.iso
+console.log
+qemu.pid
+known_hosts
+id_ed25519
+id_ed25519.pub
+runtime.conf
