@@ -167,8 +167,6 @@ tarea-3/
   src/process.c schedulers.c simulador.c
   Procesos.txt
   Makefile  test.sh  README.md
-  EXPO.md             (guion de la exposición)
-  DIAGRAMAS.md        (diagramas de estructuras y flujo)
   results/            (lo genera make test)
 ```
 
@@ -295,7 +293,7 @@ Además, se validó contra una implementación de referencia independiente (Pyth
 | Conclusiones | §10 |
 | Round-Robin con varios quantums e inclusión de q = 4 | §2.3 y §5.5 — `q ∈ {1, 2, 4, 8}` (RR no se cuenta como seleccionado, ver §1) |
 
-Entregables: código fuente (§6), repositorio en GitHub (URL arriba), reporte (este README), resultados (§7 y `results/simulacion.txt`, generado por `make test`) y exposición (guion en `EXPO.md`, diagramas en `DIAGRAMAS.md`).
+Entregables: código fuente (§6), repositorio en GitHub (URL arriba), reporte (este README), resultados (§7 y `results/simulacion.txt`, generado por `make test`) y exposición.
 
 ---
 
