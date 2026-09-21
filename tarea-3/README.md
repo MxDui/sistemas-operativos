@@ -1,13 +1,5 @@
 # Simulador de planificación de CPU
 
-**Proyecto:** algoritmos de planificación — *Sistemas Operativos*
-**Algoritmos seleccionados:** Shortest Remaining Time Next (3 pts) + Múltiples colas por prioridad (3 pts) = **6 puntos**
-**Datos de prueba:** `Procesos.txt` (100 procesos)
-**Repositorio:** https://github.com/MxDui/sistemas-operativos — carpeta `tarea-3/`
-**Estado:** ✅ compila con `-Wall -Wextra -Wpedantic`, pasa 10/10 self-tests y coincide proceso por proceso con una implementación de referencia independiente
-
-También se implementaron **FCFS**, **SJF**, **Priority** y **Round-Robin** como líneas base de comparación (no cuentan para el puntaje).
-
 ---
 
 ## 1. Selección y puntaje
@@ -271,30 +263,7 @@ Además, se validó contra una implementación de referencia independiente (Pyth
 
 ## 11. Integrantes
 
-> Completar nombres y quién explica cada bloque en clase (sugerencia: uno SRTN + comparación, otro MLQ + prioridades).
-
-| Integrante | Parte |
+| Integrante | Número de cuenta |
 |---|---|
-| | SRTN, comparación de resultados |
-| | Múltiples colas por prioridad, prioridad absoluta, quantums |
-
----
-
-## 12. Cumplimiento de los requisitos de la actividad
-
-| Requisito del reporte | Dónde se cumple |
-|---|---|
-| Algoritmo(s) seleccionado(s) | §1 — SRTN (3 pts) + Múltiples colas por prioridad (3 pts) = **6 pts** (equipo de 2 → mínimo 4) |
-| Cómo funciona cada algoritmo | §2 — SRTN (§2.1), MLQ (§2.2), líneas base (§2.3) |
-| Estructuras de datos utilizadas | §4 — `Process`, `Queue`, `Gantt`/`Slice`, `Metrics` |
-| Decisiones tomadas durante la implementación | §5 (ocho decisiones) y §2.2 (convenios de MLQ) |
-| Resultados de la simulación | §7 — promedios, espera por ráfaga y casos puntuales con `Procesos.txt` |
-| Comparación de resultados | §8 — SRTN vs MLQ vs SJF / Priority / FCFS / RR |
-| Conclusiones | §10 |
-| Round-Robin con varios quantums e inclusión de q = 4 | §2.3 y §5.5 — `q ∈ {1, 2, 4, 8}` (RR no se cuenta como seleccionado, ver §1) |
-
-Entregables: código fuente (§6), repositorio en GitHub (URL arriba), reporte (este README), resultados (§7 y `results/simulacion.txt`, generado por `make test`) y exposición.
-
----
-
-*Código: `src/simulador.c` · `src/schedulers.c` · `src/process.c` · `test.sh` · `README.md`*
+| David Rivera Morales | 320176876 |
+| Yessica Vianney Montes de Oca Aguilar | 315050116 |
