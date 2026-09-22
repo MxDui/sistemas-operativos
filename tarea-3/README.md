@@ -4,80 +4,57 @@
 
 ## 1. Selección y puntaje
 
-| Integrantes | Mínimo | Esta entrega |
-|---|---|---|
-| 1 | 3 | SRTN (3) + MLQ (3) = 6 |
-| 2 | 4 | SRTN (3) + MLQ (3) = 6 |
+Equipo de 2 integrantes. Los algoritmos seleccionados son SRTN y Múltiples colas por prioridad (MLQ). Ninguno de los dos estaba tomado ya por otro equipo al momento de la elección (regla: máximo dos equipos por algoritmo).
 
-Equipo de **2 integrantes**: 6 ≥ 4. Ninguno de los dos algoritmos seleccionados estaba tomado por otro equipo al momento de la elección (regla: máximo dos equipos por algoritmo).
-
-FCFS y Round-Robin **no** se cuentan como algoritmos seleccionados: FCFS solo vale para trabajo individual, y RR ya estaba registrado por otro equipo. Los dos se corren igual, como línea base de comparación (junto con SJF y Priority).
+El simulador también incluye FCFS, SJF, Priority y Round-Robin como referencia interna para validar la implementación y dar contexto a los resultados, pero no forman parte de la selección del equipo (no cuentan para el puntaje ni son el foco del reporte).
 
 ---
 
 ## 2. Cómo funciona cada algoritmo
 
-El reloj de la simulación es discreto (unidades enteras). En cada instante `t` se admiten las llegadas con `arrival == t` y después se decide quién usa la CPU.
+El reloj de la simulación es discreto (unidades enteras). En cada instante `t` primero entran los procesos cuyo `arrival` es igual a `t`, y luego se decide quién ocupa la CPU.
 
-### 2.1 SRTN (seleccionado, 3 pts)
+### 2.1 SRTN
 
-Versión **expulsiva** de SJF. En cada evento (llegada o fin) se elige el proceso listo con **menor tiempo restante**. Si un recién llegado tiene menos remaining que el actual, lo expulsa.
+Es la variante expulsiva de SJF: en cada evento (una llegada o el fin de un proceso) toma la CPU el proceso listo con menor tiempo restante. Cuando llega uno nuevo con menos remaining que el que está corriendo, lo saca y toma su lugar.
 
-Empates: menor `arrival`, luego menor `id`. Si el remaining es igual, el actual suele quedarse (no se expulsa “de gusto”).
+Los empates se resuelven por menor `arrival` y después por menor `id`. Si dos procesos quedan con el mismo remaining, se deja correr al que ya estaba (no hay expulsión sin una ventaja real).
 
-SRTN minimiza el tiempo medio de espera entre los algoritmos que conocen la ráfaga. El costo: los jobs largos se postergan (inanición).
+De los algoritmos que conocen la duración de la ráfaga, SRTN es el que logra menor espera promedio. A cambio, los procesos largos quedan relegados una y otra vez mientras existan procesos más cortos por atender (ahí aparece la inanición).
 
-### 2.2 Múltiples colas por prioridad (seleccionado, 3 pts)
+### 2.2 Múltiples colas por prioridad
 
-Una cola FIFO por cada prioridad distinta, ordenadas de mayor a menor prioridad (menor número = más prioridad). En cada instante se atiende **siempre la cola no vacía de mayor prioridad**; dentro de cada cola el reparto es **Round-Robin**.
+Cada nivel de prioridad tiene su propia cola FIFO, y las colas quedan ordenadas de la más alta a la más baja (un número menor significa mayor prioridad). El planificador siempre atiende la cola no vacía de más alto nivel, y dentro de esa cola el reparto es por Round-Robin.
 
-**Prioridad absoluta entre colas** (Silberschatz §5.3.4): si llega un proceso a una cola mejor que la del proceso en CPU, lo expulsa en ese mismo instante. El expulsado vuelve al **frente** de su propia cola (no consumió su quantum) y al reanudar recibe quantum nuevo: el quantum mide servicio continuo.
+Entre colas rige prioridad absoluta: en cuanto llega un proceso a una cola superior a la del que está en CPU lo desaloja. El proceso desalojado no pierde su lugar  (regresa al frente de su propia cola, y cuando vuelva a correr arrancará con un quantum completo, ya que el quantum mide servicio continuo, no acumulado).
 
-Decisiones de la implementación:
+Otras decisiones de diseño:
 
-- **Sin realimentación:** un proceso nunca cambia de cola (eso sería MLFQ, otro algoritmo de la tabla).
-- **Quantum `q = 4` por defecto**, igual para todas las colas (configurable con `-q`). Así la comparación contra RR q=4 es a costo igual.
-- Mismas convenciones de cola que RR: las llegadas de `t` se admiten antes de reencolar y las llegadas simultáneas entran por `(arrival, id)`.
+- No hay realimentación: ningún proceso cambia de cola durante la corrida (eso sería MLFQ, que es otro algoritmo de la tabla).
+- El quantum por defecto es `q = 4` y aplica igual a todas las colas (se puede ajustar con `-q`), para que comparar contra RR q=4 sea justo.
+- Las colas siguen las mismas reglas de admisión que RR: las llegadas del instante `t` entran antes de reencolar al proceso saliente, y ante llegadas simultáneas se admite primero por `(arrival, id)`.
 
-En `Procesos.txt` (prioridad = ráfaga / 2) esto se traduce en: las colas 1 (ráfaga 2) y 2 (ráfaga 4) corren al instante (respuesta 0); la cola 3 (ráfaga 6) espera poco; las colas 4 (ráfaga 8) y 5 (ráfaga 10) se postergan hasta que las mejores se vacían — la cola 5 no arranca hasta t ≈ 400.
-
-### 2.3 Algoritmos de comparación (línea base)
-
-| Algoritmo | Tipo | Criterio al despachar |
-|---|---|---|
-| FCFS | no expulsivo | menor llegada, luego menor id |
-| SJF | no expulsivo | menor ráfaga original |
-| Priority | no expulsivo | menor número de prioridad |
-| RR | expulsivo | cola FIFO circular, quantum fijo |
-
-**Prioridad:** número menor = mayor prioridad (convenio clásico del libro, el mismo que usa MLQ).
-
-**RR** se corre con varios quantums (`q ∈ {1, 2, 4, 8}`) para medir la sensibilidad al quantum:
-
-- `q` chico → mejor tiempo de respuesta, muchos cambios de contexto.
-- `q` grande → RR se parece a FCFS: menos cambios, peor respuesta.
-
-Sus convenios de cola (llegadas de `t` antes de reencolar; admisión por `(arrival, id)`) son los mismos que usa MLQ dentro de cada cola.
+Como en `Procesos.txt` la prioridad equivale a ráfaga entre 2, esto se traduce en un patrón: las colas 1 (ráfaga 2) y 2 (ráfaga 4) reciben CPU de inmediato (respuesta 0), la cola 3 (ráfaga 6) espera poco, y las colas 4 y 5 (ráfagas 8 y 10) quedan pausadas hasta que las de arriba se vacían. La cola 5 no arranca antes de t ≈ 400.
 
 ---
 
 ## 3. Formato de entrada y métricas
 
-Cada línea de `Procesos.txt`:
+Cada línea de `Procesos.txt` trae cuatro valores:
 
 ```
 id   arrival   burst   priority
 ```
 
-Ejemplo: `1  0  2  1` → P1 llega en t=0, pide 2 u.t., prioridad 1.
+Por ejemplo, `1  0  2  1` describe a P1: llega en t=0, necesita 2 u.t. de CPU y tiene prioridad 1.
 
-Los 100 procesos del archivo de prueba:
+El archivo de prueba tiene 100 procesos con este patrón:
 
-- llegan cada 2 u.t. (`0, 2, …, 198`)
-- ráfagas cíclicas `2, 4, 6, 8, 10`
-- prioridades cíclicas `1, 2, 3, 4, 5`
+- una llegada cada 2 u.t. (`0, 2, …, 198`)
+- ráfagas que se repiten en ciclos de `2, 4, 6, 8, 10`
+- prioridades que también ciclan en `1, 2, 3, 4, 5`
 
-En **este** dataset, `priority == burst / 2`. Por eso Priority y SJF dan **el mismo** schedule, y por eso la cola 5 de MLQ son exactamente los jobs de ráfaga 10.
+Al construir el archivo así, la prioridad terminó siendo `burst / 2` en todos los casos. Esa coincidencia explica por qué Priority y SJF producen exactamente el mismo orden de ejecución, y por qué la cola 5 de MLQ termina siendo, sin proponérselo, la misma que agrupa a los procesos de ráfaga 10.
 
 Métricas por proceso:
 
@@ -87,7 +64,7 @@ Métricas por proceso:
 | Retorno (TAT) | `finish − arrival` |
 | Espera | `TAT − burst` |
 
-Métricas globales: promedios, utilización (`(makespan − idle) / makespan`), throughput (`n / makespan`), cambios de contexto (cuando la CPU pasa de un proceso a otro; el primer despacho no cuenta).
+Métricas globales: promedios de las tres anteriores, utilización ((makespan − idle) / makespan), throughput (n / makespan) y cambios de contexto (cuando la CPU pasa de un proceso a otro; el primer despacho no cuenta).
 
 ---
 
@@ -105,22 +82,21 @@ Gantt / Slice      segmentos compactos (pid, start, end); se fusionan
 Metrics            promedios y totales de una corrida
 ```
 
-No hace falta un heap: hay 100 procesos. SJF / SRTN / Priority recorren el arreglo y eligen el mejor listo (`pick_ready`). RR y MLQ usan colas FIFO (MLQ una por nivel).
+Con solo 100 procesos, un heap sería sobrekill. SRTN recorre el arreglo completo en cada evento y se queda con el proceso listo de menor remaining (función pick_ready). MLQ sí necesita colas FIFO — una por cada nivel de prioridad distinto.
 
-El lazo de SRTN es por **eventos** (salta al próximo arrival o al fin del actual). RR y MLQ avanzan de a 1 tick porque el quantum corta la ráfaga; en MLQ además cada tick se re-evalúa la cola de mayor prioridad, porque la expulsión entre colas es inmediata.
+El lazo de SRTN avanza por eventos: brinca directo a la próxima llegada o al momento en que termina el proceso actual, sin recorrer tick por tick. MLQ, en cambio, avanza de uno en uno, porque el quantum puede cortar la ráfaga en cualquier punto, y en cada tick hay que revisar si apareció una cola de mayor prioridad, ya que esa expulsión ocurre al instante.
 
 ---
 
 ## 5. Decisiones de implementación
 
-1. **Copia + reset por algoritmo.** Cada simulación parte de los mismos 100 procesos; `remaining` vuelve a `burst`.
-2. **Self-tests embebidos** (`--self-test`) con casos de Silberschatz/Tanenbaum *antes* de correr el archivo oficial. Si el promedio de espera de FCFS no es 17, el de SRTN no es 6.5 o el de MLQ q=2 no es 3, algo está mal.
-3. **Invariantes** después de cada corrida: `TAT = finish − arrival`, `wait = TAT − burst`, `response = start − arrival`, `finish ≥ arrival + burst`, `remaining = 0`.
-4. **Conservación de tiempo:** `suma(burst) + idle = makespan` (`último finish − primera llegada`). En `Procesos.txt` da `600 + 0 = 600` en todos los algoritmos. El hueco `[0, primera llegada)` no se cuenta como ocioso: no hay nada que planificar todavía. Utilización = `suma(burst) / makespan`.
-5. **RR se corre con varios quantums** (`1, 2, 4, 8`) como línea base, para medir la sensibilidad al quantum; **MLQ usa q = 4** por defecto (override con `-q`).
-6. **Priority no expulsivo**, para contrastarlo con SRTN (expulsivo) y no duplicar la idea de “siempre el mejor”.
-7. **MLQ con prioridad absoluta entre colas** (Silberschatz): la expulsión entre colas es inmediata, no se espera al fin del quantum. El expulsado vuelve al frente de su cola y conserva su turno; al reanudar recibe quantum nuevo.
-8. **MLQ sin realimentación:** los procesos nunca cambian de cola. Es la diferencia con MLFQ, que degrada a los que agotan su quantum.
+1. **Copia y reinicio antes de cada ejecucion.** SRTN y MLQ parten del mismo conjunto de 100 procesos; `remaining` se restaura a `burst` en cada una.
+2. **Self-tests integrados** (`--self-test`), con casos tomados de Silberschatz y Tanenbaum, que se ejecutan antes de tocar el archivo oficial. Incluyen casos específicos de SRTN (espera 6.5) y de MLQ (expulsión entre colas, empate quantum/llegada) — son la red de seguridad de la implementación.
+3. **Verificación de invariantes** al terminar: `TAT = finish − arrival`, `wait = TAT − burst`, `response = start − arrival`, `finish ≥ arrival + burst`, `remaining = 0`.
+4. **Conservación de tiempo.** La suma de ráfagas más el tiempo ocioso debe igualar el makespan (`último finish − primera llegada`); con `Procesos.txt` da `600 + 0 = 600` tanto en SRTN como en MLQ. El hueco antes de la primera llegada no cuenta como tiempo ocioso, porque ahí todavía no hay nada que planificar.
+5. **MLQ usa `q = 4`** por defecto, con la opción de cambiarlo vía `-q` para explorar otros valores.
+6. **Prioridad absoluta entre colas en MLQ** (Silberschatz): la expulsión entre niveles ocurre de inmediato, sin esperar a que se agote el quantum. El proceso desalojado conserva su turno — vuelve al frente de su cola y arranca con quantum nuevo al reanudar.
+7. **Sin realimentación entre colas:** ningún proceso migra de nivel durante la simulación. Ahí está la diferencia con MLFQ, que sí degrada a quienes agotan su quantum.
 
 ---
 
@@ -196,49 +172,43 @@ Hay 20 procesos de cada tamaño. Aquí se ve *quién* paga el promedio.
 | 8 | 196.00 | 215.00 | 215.00 | 253.00 | 284.80 | 375.90 |
 | 10 | 202.00 | 392.00 | 392.00 | 468.00 | 399.90 | 431.95 |
 
-### 7.3 Ejemplos puntuales (SRTN vs MLQ vs RR q=4)
+### 7.3 Ejemplos puntuales (SRTN vs MLQ)
 
-| PID | Burst | SRTN espera | SRTN inicio–fin | MLQ espera | MLQ inicio–fin | RR q=4 espera | RR q=4 inicio–fin |
-|---|---:|---:|---|---:|---|---:|---|
-| 1 | 2 | 0 | 0–2 | 0 | 0–2 | 0 | 0–2 |
-| 5 | 10 | 392 | 400–410 | 544 | 400–562 | 90 | 14–108 |
-| 6 | 2 | 2 | 12–14 | 0 | 10–12 | 8 | 18–20 |
-| 100 | 10 | 392 | 590–600 | 392 | 476–600 | 392 | 446–600 |
+| PID | Burst | SRTN espera | SRTN inicio–fin | MLQ espera | MLQ inicio–fin |
+|---|---:|---:|---|---:|---|
+| 1 | 2 | 0 | 0–2 | 0 | 0–2 |
+| 5 | 10 | 392 | 400–410 | 544 | 400–562 |
+| 6 | 2 | 2 | 12–14 | 0 | 10–12 |
+| 100 | 10 | 392 | 590–600 | 392 | 476–600 |
 
-P5 (job largo temprano): SRTN **no le da CPU hasta t=400** y lo termina en 410; MLQ también lo deja hasta t=400, pero además lo hace esperar a que su propia cola (la 5) se reparta por RR, así que termina en 562. En RR q=4 entra desde t=14. Los promedios de SRTN/MLQ ganan porque hay muchos jobs cortos; el job largo individual pierde.
+P5 (job largo temprano): SRTN no le da CPU hasta t=400 y lo termina en 410; MLQ también lo deja hasta t=400, pero además lo hace esperar a que su propia cola (la 5) se reparta por Round-Robin, así que termina hasta t=562.
 
 ---
 
 ## 8. Comparación
 
-1. **SRTN gana en espera/retorno** (129.66 / 135.66). SJF queda a 0.12 porque este patrón de llegadas deja poco margen para expulsar: solo 6 cambios extra (105 vs 99).
-2. **MLQ paga la prioridad con espera, pero gana respuesta.** Respeta una política que SRTN ignora: las colas 1–2 (40 procesos) tienen **respuesta 0**; el costo lo pagan las colas 4–5. Su respuesta media (108.90) es mejor que la de SRTN (129.54) y que la de RR q=4 (122.82), con los **mismos 179 cambios** que RR q=4.
-3. **MLQ vs RR q=4 a igual quantum:** MLQ gana en espera (154.84 vs 240.64) y en respuesta (108.90 vs 122.82) con el mismo número de cambios. La diferencia es solo el orden por clases de prioridad.
-4. **Priority ≡ SJF** en *este* archivo: la prioridad es función lineal de la ráfaga. En un dataset real no coincidirían — y MLQ tampoco: no mira la ráfaga, solo la clase, así que con prioridades no correlacionadas su comportamiento cambiaría por completo.
-5. **FCFS es más justo entre tamaños** (espera ~190–202 para todos) pero el promedio es peor: los jobs de 2 u.t. se quedan atrás de los de 10. Es el efecto convoy.
-6. **RR no gana el promedio de espera** — y no es su objetivo. Gana **respuesta**: q=1 deja a todos en ~38 u.t.; SRTN deja a los jobs de 10 en 392. A mayor `q`, RR se acerca a FCFS (q=8: espera 219.88 vs FCFS 194; respuesta 180.92 vs 194).
-7. **Inanición:** en SRTN/SJF los 20 procesos de ráfaga 10 esperan **exactamente 392** y corren en bloque al final (`400…600`); en MLQ la cola 5 arranca también en t≈400 (P5: espera 544). En este dataset el verdugo es el mismo (prioridad = ráfaga/2), pero por razones distintas: SRTN mira el remaining, MLQ nunca mira la ráfaga. RR los intercala desde el principio.
-8. **Costo de RR:** 597 cambios con q=1 frente a 105 de SRTN. En un kernel real cada cambio cuesta.
+1. **SRTN gana en espera y retorno** (129.66 / 135.66 contra 154.84 / 160.84 de MLQ). Al no atarse a clases de prioridad, SRTN siempre elige globalmente al proceso más corto disponible; MLQ, en cambio, respeta el orden por cola aunque eso implique dejar esperando a un proceso corto si está en una cola de menor prioridad.
+
+2. **MLQ gana en respuesta** (108.90 contra 129.54 de SRTN). Las colas 1 y 2 (40 procesos, prioridades más altas) tienen respuesta 0 — entran a la CPU en cuanto llegan — y ese beneficio se refleja en el promedio general, aunque el costo lo paguen las colas 4 y 5.
+
+3. **Cada uno perjudica a un grupo distinto.** En SRTN, los 20 procesos de ráfaga 10 esperan exactamente 392 u.t. y corren en bloque al final (t=400 a 600) — el criterio es puramente el tamaño de la ráfaga. En MLQ, la cola 5 arranca también en t≈400, pero por una razón distinta: no es que MLQ mire la ráfaga (nunca lo hace), sino que esos procesos comparten la prioridad más baja. En este dataset ambos criterios terminan castigando al mismo grupo porque prioridad y ráfaga están correlacionadas por construcción — en un dataset donde no lo estuvieran, MLQ perjudicaría a una clase distinta.
+
+4. **Costo en cambios de contexto:** MLQ generó 179 cambios contra 105 de SRTN — el reparto por Round-Robin dentro de cada cola cuesta más cambios que el estilo de SRTN, que solo cambia de proceso cuando de verdad conviene.
 
 ```
-mejor espera ──────────►  SRTN ≈ SJF = Priority  <  MLQ  <  FCFS  <  RR(q grande)  <  RR(q chico)
-mejor respuesta ───────►  RR(q=1)  <  RR(q=2)  <  MLQ  <  RR(q=4)  <  SRTN  <  FCFS
-más cambios de ctx ────►  RR(q=1)  >>  RR(q=2)  >  RR(q=4) = MLQ  >  RR(q=8)  >  SRTN  >  FCFS/SJF
+mejor espera      ──────►  SRTN  <  MLQ
+mejor respuesta   ──────►  MLQ  <  SRTN
+más cambios de ctx ─────►  MLQ  >  SRTN
 ```
 
 ---
 
 ## 9. Self-tests (casos de libro)
+Estos self-tests validan el motor completo (incluye FCFS/SJF/Priority/RR), pero los casos relevantes a la selección del equipo son los de SRTN y MLQ:
 
 | Caso | Esperado | Obtenido |
 |---|---|---|
-| FCFS P1=24, P2=3, P3=3 @ t=0 | espera 17, TAT 27 | 17 / 27 |
-| SJF mismos procesos | espera 3, TAT 13 | 3 / 13 |
-| RR q=4 mismos procesos | espera 5.6667, TAT 15.6667 | 5.6667 / 15.6667 |
 | SRTN 8@0, 4@1, 9@2, 5@3 | espera 6.5, TAT 13 | 6.5 / 13 |
-| Priority 10/3, 1/1, 2/4, 1/2 | espera 3.75 | 3.75 |
-| RR q=2 con 1.ª llegada en t=3 y hueco ocioso | idle 2, makespan 11, CPU 81.82 % | OK |
-| RR q=2 llegadas simultáneas desordenadas en el archivo | admisión por id | OK |
 | MLQ q=2: prio 2 espera a que la cola 1 se vacíe; RR dentro de cada cola | espera 3, TAT 19/3 | 3 / 6.3333 |
 | MLQ q=4: expulsión entre colas (P1 reanuda en t=4, fin 10) | espera 1, TAT 6, 2 cambios | 1 / 6 / 2 |
 | MLQ q=4: el quantum expira justo cuando llega otro a la misma cola | la llegada entra antes que el expirado (P2 corre 4–6) | espera 1 / TAT 6 |
@@ -248,16 +218,16 @@ $ ./simulador --self-test
 Self-test: 10 comprobaciones, 0 fallos.
 ```
 
-Además, se validó contra una implementación de referencia independiente (Python, tick a tick): tiempos de inicio y fin **idénticos para los 100 procesos** en FCFS, SJF, SRTN, Priority y RR con q ∈ {1, 2, 3, 4, 8}; MLQ se validó igual con q ∈ {1, 2, 3, 4, 5, 8} y en 8 datasets aleatorios con huecos de CPU ociosa, llegadas simultáneas y prioridades arbitrarias (62/62 corridas idénticas en total).
+Además, se validó SRTN y MLQ contra una implementación de referencia independiente (Python, tick a tick): SRTN dio tiempos de inicio y fin idénticos para los 100 procesos; MLQ se validó igual con q ∈ {1, 2, 3, 4, 5, 8} y en 8 datasets aleatorios con huecos de CPU ociosa, llegadas simultáneas y prioridades arbitrarias, con resultados idénticos en todas las corridas.
 
 ---
 
 ## 10. Conclusiones
 
-- Con los datos oficiales, **SRTN es el mejor promedio de espera** (129.66) y **MLQ el mejor compromiso con las prioridades**: respuesta media 108.90 (mejor que SRTN y que RR q=4), pagando en las colas bajas.
-- El archivo de prueba **acopla prioridad y ráfaga**. Sirve para ver SJF/MLQ, pero no para defender Priority ni MLQ como políticas independientes del tamaño: hay que decirlo en la expo.
-- Elegir el algoritmo es elegir *a quién perjudicar*. SRTN perjudica a los jobs largos (los 20 de ráfaga 10 esperan 392 en bloque); MLQ perjudica a la clase baja (cola 5: espera media 468, arranca en t≈400); FCFS perjudica a los cortos que llegan detrás de un convoy; RR reparte el daño y cobra en cambios de contexto.
-- El quantum no es un detalle: en RR, pasar de q=1 a q=4 baja los cambios de 597 a 179 y sube la respuesta de 38 a 123; en MLQ el quantum reparte el servicio *dentro* de cada clase.
+- Con los datos de `Procesos.txt`, **SRTN logra la mejor espera promedio** (129.66) porque siempre elige globalmente al proceso más corto, sin importar ninguna otra clasificación.
+- **MLQ logra mejor respuesta** (108.90) porque garantiza atención inmediata a las clases de mayor prioridad, aunque eso implique postergar más a las clases bajas.
+- El archivo de prueba acopla prioridad y ráfaga (`priority = burst / 2`), así que en este dataset ambos algoritmos terminan perjudicando al mismo grupo de procesos (los de ráfaga 10) — pero por criterios distintos: SRTN mira directamente el tiempo restante, MLQ nunca lo hace, solo mira la clase asignada. Hay que dejarlo claro en la expo: esta coincidencia es del dataset, no de los algoritmos.
+- Elegir entre SRTN y MLQ es elegir qué se prioriza: tiempo total de espera (SRTN) o garantía de atención rápida por clase (MLQ), aunque la segunda cueste más cambios de contexto (179 vs 105).
 
 ---
 
