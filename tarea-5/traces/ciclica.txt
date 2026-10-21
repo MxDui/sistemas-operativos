@@ -1,0 +1,9 @@
+# Traza cíclica: páginas 0..9 repetidas 10 veces (100 referencias).
+# Con 2..8 marcos FIFO, LRU, Second Chance y Aging de 8 bits dan 100 fallos;
+# OPT logra aciertos. Con 9 marcos Aging da 65 fallos. Con 10 marcos todos
+# aciertan después de la primera vuelta (10 fallos).
+0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9
+0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9
+0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9
+0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9
+0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9

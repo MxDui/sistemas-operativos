@@ -1,0 +1,25 @@
+# Solo se suben los entregables: código con instrucciones (README.md),
+# reporte en PDF y presentación en PDF. Todo lo demás se regenera con make.
+
+# Binarios y temporales
+simulador
+*.o
+__pycache__/
+*.pyc
+
+# Resultados generados (make test / make plots); solo se conservan las
+# gráficas que el README incluye.
+results/*
+!results/*.png
+
+# Notas internas de la exposición
+EXPO.md
+
+# Documentos: fuentes LaTeX, formato, escudos e intermedios. Solo van los PDF finales.
+docs/*
+!docs/Tarea5_E04_Reporte.pdf
+!docs/Tarea5_E04_Presentacion.pdf
+
+# Herramientas de regeneración; trazas y gráficas ya están versionadas
+scripts/plots.py
+scripts/gen_traces.py

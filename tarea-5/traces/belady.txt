@@ -1,0 +1,4 @@
+# Cadena de Belady (anomalía de Belady).
+# Con 3 marcos FIFO produce 9 fallos; con 4 marcos produce 10.
+# Second Chance también la exhibe (9 -> 10); LRU, Aging y OPT no.
+1 2 3 4 1 2 5 1 2 3 4 5

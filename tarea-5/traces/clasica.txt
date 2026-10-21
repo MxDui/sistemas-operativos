@@ -1,0 +1,4 @@
+# Cadena clásica de Silberschatz (Operating System Concepts, 10a ed.)
+# 20 referencias, páginas 0..7.
+# Con 3 marcos: FIFO=15 fallos, LRU=12, OPT=9; Second Chance=14, Aging=12.
+7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1
