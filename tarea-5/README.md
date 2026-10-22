@@ -15,7 +15,7 @@ de referencia (clásica, Belady, cíclica y dos con localidad) midiendo fallos,
 aciertos, expulsiones y costo. Con 4 marcos, Aging empató con LRU (945 fallos
 en la traza de 2000 referencias) y redujo los fallos de Second Chance en
 3.8 %; Second Chance requiere un solo bit de referencia por marco en el modelo
-teórico. No se midieron tiempos de CPU. Con más marcos, el Aging de 8 bits perdió terreno frente a Second
+teórico. Con más marcos, el Aging de 8 bits perdió terreno frente a Second
 Chance, y aumentar el contador a 14–16 bits recuperó buena parte de la
 diferencia. Second Chance exhibió la anomalía de Belady; Aging no. La conclusión
 es que no hay un ganador absoluto: el resultado depende de la localidad de la
@@ -99,7 +99,7 @@ Dos conceptos aparecen en el análisis:
 Se mantienen los marcos en una lista circular y un puntero `hand`. Cada marco
 tiene un **bit de referencia R**:
 
-- `R = 1` significa "esta página se usó desde la última vez que la miré".
+- `R = 1` significa que la página se usó desde la última revisión del reloj.
 - `R = 0` significa "no se usó recientemente; es candidata a salir".
 
 En cada referencia:
@@ -343,7 +343,10 @@ make verify          # solo la verificación cruzada contra Python
 ```
 
 `make clean` elimina el ejecutable y conserva `results/`, que contiene las
-figuras y tablas utilizadas por el reporte.
+figuras utilizadas por el reporte; las tablas y trazas se generan con `make test`.
+
+En Windows, compilar y ejecutar desde WSL o MSYS2, porque el programa usa
+`getopt_long`, que no está disponible con MSVC.
 
 Uso del simulador:
 
@@ -422,8 +425,6 @@ Fallos de página y tasa entre paréntesis:
 | `localidad` | 2000 | 982 (49.10 %) | **945 (47.25 %)** | 996 (49.80 %) | **945 (47.25 %)** | **586 (29.30 %)** |
 | `mixta` | 1200 | 660 (55.00 %) | **638 (53.17 %)** | 673 (56.08 %) | **638 (53.17 %)** | **406 (33.83 %)** |
 
-Lectura rápida:
-
 - En las dos trazas con localidad, **Aging empata con LRU** y supera a Second
   Chance: 37 fallos menos en `localidad` (3.8 %) y 22 menos en `mixta`
   (3.3 %).
@@ -433,8 +434,7 @@ Lectura rápida:
   Chance; en la traza cíclica todos los algoritmos que no miran el futuro
   fallan siempre, como era de esperar.
 - OPT queda por debajo o igual en todas las trazas; en las trazas con localidad
-  la diferencia es grande (586 contra 945 de Aging en `localidad`). Es la cota
-  inferior, no una alternativa implementable.
+  la diferencia es grande (586 contra 945 de Aging en `localidad`).
 
 Métricas detalladas de `localidad` con 4 marcos:
 
@@ -456,9 +456,8 @@ Costo específico de los algoritmos seleccionados en esa misma corrida:
 Second Chance examinó 2271 marcos para 978 fallos con memoria llena: **2.32
 visitas por fallo**. Aging desplaza los contadores residentes en cada
 referencia y hace dos recorridos al expulsar: uno para buscar el mínimo y otro
-para contar empates. Esta actualización requiere trabajo adicional; el programa
-no instrumenta todas las operaciones ni mide tiempo de CPU. Los 37 fallos
-evitados son un resultado de la simulación, no una medida de velocidad.
+para contar empates. Esta actualización requiere trabajo adicional. Los 37
+fallos evitados son un resultado de la simulación, no una medida de velocidad.
 
 ### 6.2 Barrido de marcos
 
@@ -499,10 +498,11 @@ marcos** la diferencia crece. La razón está en el
 ancho del contador: con 8 bits, Aging solo recuerda las últimas 8 referencias.
 La cadena y las distancias entre referencias no cambian al agregar marcos.
 Con mayor capacidad pueden permanecer páginas cuyo último uso quedó fuera de
-la ventana del contador. Varias llegan a cero y el desempate por índice pierde
-el orden de recencia que LRU sí conserva. Second
-Chance no tiene ese límite de historia: su bit se actualiza en cada uso y el
-reloj recorre todos los marcos.
+la ventana del contador. Varias llegan a cero y Aging ya no puede distinguir
+cuál se usó hace más tiempo, orden que LRU sí conserva. En Second Chance, en
+cambio, el bit `R` solo se limpia cuando la mano del reloj pasa por el marco,
+así que su ventana efectiva es una vuelta del reloj y crece con el número de
+marcos; la de Aging se queda fija en 8 referencias.
 
 Esto no significa que Second Chance sea "mejor" en general: con 4 marcos, que
 es la configuración principal, Aging gana. El cruce es un efecto del tamaño de
@@ -524,8 +524,8 @@ La traza clásica permite ver el efecto en memoria muy pequeña:
 Con 2 marcos, LRU y Aging fallan más que FIFO/Second Chance (17 contra 15): en
 memorias muy pequeñas, recordar el último uso puede ser contraproducente si el
 patrón es cíclico. Con 3 o más marcos, Aging y LRU vuelven a ser los mejores
-entre los algoritmos sin conocimiento del futuro. Es un buen recordatorio de
-que "aproximar LRU" no garantiza ganar en todos los tamaños de memoria.
+entre los algoritmos sin conocimiento del futuro. Por lo tanto, aproximar LRU
+no garantiza ganar en todos los tamaños de memoria.
 
 La traza cíclica tiene un comportamiento de acantilado:
 
@@ -543,9 +543,8 @@ caen en el peor caso clásico del ciclo de longitud `F+1`: expulsan justo la
 página que se va a necesitar en la siguiente referencia, así que fallan las 100
 veces. Aging, al no ser FIFO puro y tener historia finita, elige una víctima
 distinta y baja a 65 fallos. Con 10 marcos todo cabe y todos bajan a 10. Es un
-caso límite que conviene mencionar en la exposición, pero no debe
-sobreinterpretarse: es una consecuencia de la interacción entre el ciclo y el
-contador, no una garantía general.
+caso límite: resulta de la interacción entre el ciclo y el contador, no es una
+propiedad general de Aging.
 
 ### 6.3 Anomalía de Belady
 
@@ -615,7 +614,8 @@ referencia exacta con los mismos marcos:
 | 10 | 231 | 540 | 360 | 327 | 278 | 276 | 257 | 254 |
 | 12 | 175 | 434 | 290 | 276 | 260 | 243 | 217 | 219 |
 
-La tendencia es clara: **más bits = más historia = más cerca de LRU**. Con 8
+La tendencia es clara: al aumentar los bits del contador, Aging se acerca a
+LRU. Con 8
 bits y 6 marcos, Aging ya iguala a LRU (561). Con 8 marcos, 14–16 bits lo
 acercan (330–327 contra 316), y con 12 marcos todavía queda una brecha (219
 contra 175). La pequeña no monotonía (12 bits da 566 en 6 marcos, 16 bits da
@@ -631,7 +631,7 @@ por lo que `-b` modifica la ventana de historia, pero no la memoria reservada.
 ![Fallos acumulados en la traza con localidad](results/fallos_acumulados_localidad.png)
 
 Con 4 marcos (panel izquierdo) las curvas de Second Chance, Aging, LRU y FIFO
-están muy cerca: la diferencia se acumula de a poco y al final es de decenas de
+están muy cerca: la diferencia se acumula poco a poco y al final es de decenas de
 fallos sobre 2000 referencias. Con 8 marcos (panel derecho) la separación es
 mucho más visible: Aging queda entre Second Chance y LRU, y FIFO es el peor.
 La pendiente de las curvas también cambia por fase: cuando el conjunto caliente
@@ -655,9 +655,8 @@ se desplaza, todos los algoritmos sufren un tramo de fallos hasta adaptarse.
    Chance empieza a ganarle a Aging en `localidad` y `mixta`. Con 8 bits, la
    historia de Aging es demasiado corta para memorias grandes. Aumentar a 14–16
    bits recupera buena parte de la diferencia (330–327 vs 316 con 8 marcos;
-   257–254 vs 231 con 10). Este es el resultado más interesante para la
-   exposición: no alcanza con decir "Aging aproxima LRU"; hay que decir **con
-   cuántos bits y para qué tamaño de memoria**.
+   257–254 vs 231 con 10). No basta con decir "Aging aproxima LRU"; hay que
+   decir **con cuántos bits y para qué tamaño de memoria**.
 
 4. **Second Chance nunca es peor que FIFO en estas trazas.** En el peor caso
    empata (traza cíclica, memoria insuficiente) y en las trazas con localidad
@@ -681,7 +680,7 @@ se desplaza, todos los algoritmos sufren un tramo de fallos hasta adaptarse.
    Aging no retienen las páginas hasta su siguiente uso. OPT logra 30 aciertos.
    Que el conjunto de trabajo no quepa no obliga a cualquier algoritmo a fallar
    siempre: el resultado depende también de las víctimas elegidas, como muestra
-   Aging con 9 marcos. Las cargas con conjuntos calientes favorecen otras decisiones.
+   Aging con 9 marcos.
 
 ### 6.8 Archivos de resultados
 
@@ -702,8 +701,6 @@ obtuvieron con el simulador en modo `-c` para cada barrido de marcos y bits.
 | `results/self_test.txt` | Salida de los 24 self-tests |
 | `results/verificacion_cruzada.txt` | Salida de la comparación C vs Python |
 | `results/*.png` | Figuras del reporte |
-
-Ninguno se edita a mano.
 
 ---
 
@@ -729,8 +726,8 @@ Self-test: 24 comprobaciones, 0 fallos.
 
 Los casos clásicos están tomados de Silberschatz: con 3 marcos, FIFO = 15,
 LRU = 12 y OPT = 9 fallos; con 4 marcos, FIFO = 10, LRU = 8 y OPT = 8. Second
-Chance da 14 y 9; Aging da 12 y 8. La coincidencia con los valores de libro es
-la primera señal de que el motor está bien.
+Chance da 14 y 9; Aging da 12 y 8. Los valores de FIFO, LRU y OPT coinciden
+con los del libro.
 
 ### 7.2 Verificación cruzada con Python
 
@@ -796,14 +793,12 @@ de imprimir resultados dudosos.
 - **Aging** consigue la mejor tasa de fallos de los dos algoritmos
   seleccionados con 4 marcos: empata con LRU en las trazas con localidad y
   reduce los fallos de Second Chance en 3–4 %. Su debilidad es el costo y la
-  dependencia del ancho del contador: con 8 bits y memorias de 9–12 marcos se
-  queda atrás de Second Chance y de LRU; con 14–16 bits se acerca de nuevo a
-  LRU.
+  dependencia del ancho del contador: con 8 bits, un desplazamiento por
+  referencia y memorias de 9–12 marcos se queda atrás de Second Chance y de
+  LRU; con 14–16 bits se acerca de nuevo a LRU.
 - **No hay un ganador absoluto.** El resultado depende de la localidad de la
   carga, del tamaño de la memoria y del presupuesto de metadata. La simulación
-  permite ver ese cruce y es la principal conclusión del trabajo: un algoritmo
-  de reemplazo no se elige solo por su nombre, sino por el contexto en el que
-  va a correr.
+  permite ver ese cruce, que es la principal conclusión del trabajo.
 - **OPT es una cota, no una opción.** La diferencia entre OPT y los algoritmos
   reales (586 vs 945 fallos en `localidad` con 4 marcos) muestra que todavía hay
   margen de mejora, pero también que las aproximaciones de bajo costo se quedan
